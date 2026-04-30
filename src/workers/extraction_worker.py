@@ -404,6 +404,7 @@ def store_in_database(job: Dict, data: Dict, doc_type: str, confidence: float) -
         document = Document(
             id=str(uuid.uuid4()),
             kyc_submission_id=submission.id,
+            job_id=job.get("job_id"),
             document_type=doc_type,
             file_path=file_path,
             extraction_method="OCR" if doc_type in ["PAN_CARD", "AADHAAR_CARD"] else "AI",

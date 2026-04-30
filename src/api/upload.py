@@ -214,13 +214,11 @@ async def get_upload_status(job_id: str, x_api_key: Optional[str] = Header(None)
 
     try:
         with get_session() as db:
+            # Query by job_id for accurate per-file status (avoids cross-contamination
+            # when multiple files are uploaded for the same submission)
             doc = (
                 db.query(Document)
-                .filter(
-                    Document.kyc_submission_id == submission_id,
-                    Document.uploaded_at >= enqueued_at,
-                )
-                .order_by(Document.uploaded_at.desc())
+                .filter(Document.job_id == job_id)
                 .first()
             )
     except Exception as exc:

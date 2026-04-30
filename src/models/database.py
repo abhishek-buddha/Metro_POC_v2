@@ -129,6 +129,7 @@ class Document(Base):
         ForeignKey("kyc_submissions.id", ondelete="CASCADE"),
         nullable=False,
     )
+    job_id = Column(String(255), nullable=True, index=True)
     document_type = Column(String(50), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer, nullable=True)
