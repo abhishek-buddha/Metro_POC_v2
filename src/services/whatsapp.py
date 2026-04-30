@@ -68,6 +68,7 @@ class WhatsAppClient:
         Returns:
             True if message sent successfully, False otherwise
         """
+        formatted_phone = None
         try:
             formatted_phone = format_phone_number(to_phone)
 
@@ -81,6 +82,7 @@ class WhatsAppClient:
                 "WhatsApp message sent successfully",
                 extra={
                     "phone_number": to_phone,
+                    "formatted_phone": formatted_phone,
                     "message_type": "text"
                 }
             )
@@ -91,8 +93,14 @@ class WhatsAppClient:
                 "Failed to send WhatsApp message",
                 extra={
                     "phone_number": to_phone,
+                    "formatted_phone": formatted_phone,
+                    "from_number": self.from_number,
                     "message_type": "text",
-                    "error": str(e)
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "twilio_code": getattr(e, 'code', None),
+                    "twilio_status": getattr(e, 'status', None),
+                    "twilio_msg": getattr(e, 'msg', None),
                 }
             )
             return False
