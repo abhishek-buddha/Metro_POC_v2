@@ -558,10 +558,10 @@ def get_submission(
                     "extraction_method": doc.extraction_method,
                     "aadhaar_side": (
                         lambda d: (
-                            # dob or aadhaar_number are reliable front-side indicators
-                            # (back side may have "S/O name" but never has dob/number)
-                            "both"  if (d.get("dob") or d.get("aadhaar_number")) and d.get("address") else
-                            "front" if (d.get("dob") or d.get("aadhaar_number")) else
+                            # dob is the only reliable front-side indicator —
+                            # aadhaar_number can appear on both sides, name appears on back (S/O)
+                            "both"  if d.get("dob") and d.get("address") else
+                            "front" if d.get("dob") else
                             "back"  if d.get("address") else None
                         )
                     )(json.loads(doc.raw_extraction_json) if doc.document_type == "AADHAAR_CARD" and doc.raw_extraction_json else {})
