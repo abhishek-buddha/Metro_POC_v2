@@ -61,4 +61,5 @@ tests/
 *.bat
 *.sh
 *.txt
+!requirements.txt
 watch_submissions.py
