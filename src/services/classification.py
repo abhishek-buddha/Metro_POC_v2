@@ -140,11 +140,11 @@ class DocumentClassifier:
             media_type = "image/jpeg"
         logger.info(f"Detected media type: {media_type}")
 
-        # Call OpenAI GPT-4 Vision API
+        # Call OpenAI GPT-4o Vision API
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Cheaper model for simple classification
-                max_tokens=10,
+                model="gpt-4o",
+                max_tokens=5,
                 temperature=0,
                 messages=[
                     {
@@ -153,32 +153,41 @@ class DocumentClassifier:
                             {
                                 "type": "text",
                                 "text": (
-                                    "Classify this document. Is it: "
-                                    "A) PAN card, "
-                                    "B) Aadhaar card, "
-                                    "C) Bank document (passbook/statement/cheque), "
-                                    "D) Other/unclear. "
-                                    "Reply with only the letter."
+                                    "You are classifying Indian KYC documents. "
+                                    "Look at the image and pick ONE letter:\n\n"
+                                    "A) PAN Card — issued by India Income Tax Dept. "
+                                    "Has text 'INCOME TAX DEPARTMENT' or 'Permanent Account Number', "
+                                    "a 10-character PAN number like ABCDE1234F, person's photo, DOB, father's name.\n\n"
+                                    "B) Aadhaar Card — India national ID issued by UIDAI. "
+                                    "Has 'AADHAAR' or 'आधार' text, 12-digit Aadhaar number, "
+                                    "person's photo and DOB (front side) OR full address with pincode (back side). "
+                                    "May have a QR code.\n\n"
+                                    "C) Bank Document — cancelled cheque, bank passbook page, or bank statement. "
+                                    "Shows bank name/logo, account number, IFSC code, branch, account holder name.\n\n"
+                                    "D) Other — anything else.\n\n"
+                                    "Reply with ONLY the single letter A, B, C, or D."
                                 )
                             },
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:{media_type};base64,{image_base64}"
+                                    "url": f"data:{media_type};base64,{image_base64}",
+                                    "detail": "high"
                                 }
                             }
                         ]
                     }
                 ]
             )
-            logger.info("OpenAI GPT-4 Vision API response received")
+            logger.info("OpenAI Vision API response received")
         except Exception as e:
             logger.error(f"OpenAI Vision API call failed: {str(e)}")
             return "UNKNOWN", 0.0
 
-        # Parse response
-        response_text = response.choices[0].message.content.strip().upper()
-        logger.info(f"AI classification response: {response_text}")
+        # Parse response — take first alphabetic character to handle "A.", "A)" etc.
+        raw = response.choices[0].message.content.strip().upper()
+        logger.info(f"AI classification response: {raw}")
+        response_text = next((c for c in raw if c in "ABCD"), "")
 
         # Map response to document type
         if response_text == "A":
@@ -190,5 +199,5 @@ class DocumentClassifier:
         elif response_text == "D":
             return "UNKNOWN", 0.5
         else:
-            logger.warning(f"Unexpected AI response: {response_text}")
+            logger.warning(f"Unexpected AI response: {raw}")
             return "UNKNOWN", 0.0

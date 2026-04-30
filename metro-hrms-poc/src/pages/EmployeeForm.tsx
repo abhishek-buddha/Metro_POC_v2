@@ -1,7 +1,7 @@
 // Employee form page with multi-step stepper
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Check, Info } from 'lucide-react';
+import { Check, Info, Eye, FileText } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import DocumentViewer from '../components/DocumentViewer';
 import type { Submission, EmployeeFormData } from '../utils/types';
@@ -474,23 +474,37 @@ const EmployeeForm: React.FC = () => {
                 Financial details
               </h3>
               <div className="grid grid-cols-2 gap-6">
-                <FileUpload
-                  label="E Aadhar Card Upload"
-                  value={formData.aadhaarUpload}
-                  onChange={(file) => handleInputChange('aadhaarUpload', file)}
-                  onView={
-                    formData.aadhaarUpload
-                      ? () =>
-                          handleViewDocument(
-                            formData.aadhaarUpload || submission?.aadhaar_pdf_url || '',
-                            'Aadhaar Card',
-                            true
-                          )
-                      : undefined
-                  }
-                  existingFileUrl={submission?.aadhaar_pdf_url || undefined}
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    E Aadhar Card Upload <span className="text-red-500">*</span>
+                  </label>
+                  {submission?.aadhaar_pdf_urls && submission.aadhaar_pdf_urls.length > 0 ? (
+                    <div className="space-y-2">
+                      {submission.aadhaar_pdf_urls.map((url, idx) => (
+                        <div key={idx} className="border border-gray-300 rounded-lg p-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <FileText size={16} className="text-indigo-600 flex-shrink-0" />
+                            <span className="text-sm text-gray-700 truncate">
+                              Aadhaar {submission.aadhaar_pdf_urls.length > 1 ? (idx === 0 ? '(Front / Side 1)' : '(Back / Side 2)') : ''}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleViewDocument(url, `Aadhaar Card ${idx + 1}`, true)}
+                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded ml-2"
+                            title="View document"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-gray-300 rounded-lg p-3 text-sm text-gray-400 text-center">
+                      No Aadhaar documents uploaded
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

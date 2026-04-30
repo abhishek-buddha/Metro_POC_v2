@@ -90,6 +90,9 @@ const mapSubmission = (backendData: any): Submission => {
     aadhaar_pdf_url: backendData.documents?.find((d: any) => d.document_type === 'AADHAAR_CARD')?.file_path
       ? toDocumentUrl(backendData.documents.find((d: any) => d.document_type === 'AADHAAR_CARD').file_path)
       : null,
+    aadhaar_pdf_urls: (backendData.documents ?? [])
+      .filter((d: any) => d.document_type === 'AADHAAR_CARD' && d.file_path)
+      .map((d: any) => toDocumentUrl(d.file_path)),
     pan_pdf_url: backendData.documents?.find((d: any) => d.document_type === 'PAN_CARD')?.file_path
       ? toDocumentUrl(backendData.documents.find((d: any) => d.document_type === 'PAN_CARD').file_path)
       : null,
@@ -154,6 +157,11 @@ export const submissionApi = {
   finalize: async (id: string, data: any): Promise<any> => {
     const response = await apiClient.post(`/api/submissions/${id}/finalize`, data);
     return response.data;
+  },
+
+  // Delete submission
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/submissions/${id}`);
   },
 };
 

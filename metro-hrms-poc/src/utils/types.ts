@@ -27,6 +27,7 @@ export interface Submission {
   branch_name: string;
   bank_branch?: string | null;
   aadhaar_pdf_url: string | null;
+  aadhaar_pdf_urls: string[];
   pan_pdf_url: string | null;
   cancelled_cheque_url: string | null;
 
