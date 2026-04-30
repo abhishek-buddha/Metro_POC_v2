@@ -250,8 +250,10 @@ def validate_extraction(data: Dict, doc_type: str) -> Tuple[bool, float]:
         required_fields = ["pan_number", "name", "dob"]
         is_valid = all(data.get(field) for field in required_fields)
     elif doc_type == "AADHAAR_CARD":
-        required_fields = ["aadhaar_number", "name", "dob"]
-        is_valid = all(data.get(field) for field in required_fields)
+        # Accept front (has name) OR back (has address) — both are valid Aadhaar sides
+        has_front = bool(data.get("aadhaar_number") and data.get("name"))
+        has_back = bool(data.get("address"))
+        is_valid = has_front or has_back
     elif doc_type == "BANK_DOCUMENT":
         required_fields = ["account_number", "account_holder_name", "ifsc_code"]
         is_valid = all(data.get(field) for field in required_fields)
@@ -326,15 +328,24 @@ def store_in_database(job: Dict, data: Dict, doc_type: str, confidence: float) -
             submission.pan_confidence = confidence
 
         elif doc_type == "AADHAAR_CARD":
-            # Mask Aadhaar number (keep only last 4 digits)
+            # Smart merge: front has name/dob/gender, back has address.
+            # Never overwrite an existing field with null — always keep the best data.
             if data.get("aadhaar_number"):
                 submission.aadhaar_last4 = mask_aadhaar(data["aadhaar_number"])
-            submission.aadhaar_name = data.get("name")
-            submission.aadhaar_dob = data.get("dob")
-            submission.aadhaar_gender = data.get("gender")
-            submission.aadhaar_address = data.get("address")
-            submission.aadhaar_pincode = data.get("pincode")
-            submission.aadhaar_confidence = confidence
+            if data.get("name"):
+                submission.aadhaar_name = data["name"]
+            if data.get("dob") and not submission.aadhaar_dob:
+                # Only set DOB from front (which has real DOB); skip back-side misreads
+                submission.aadhaar_dob = data["dob"]
+            if data.get("gender"):
+                submission.aadhaar_gender = data["gender"]
+            if data.get("address"):
+                submission.aadhaar_address = data["address"]
+            if data.get("pincode"):
+                submission.aadhaar_pincode = data["pincode"]
+            # Keep the highest confidence seen across front and back
+            if not submission.aadhaar_confidence or confidence > submission.aadhaar_confidence:
+                submission.aadhaar_confidence = confidence
 
         elif doc_type == "BANK_DOCUMENT":
             # Encrypt bank account number

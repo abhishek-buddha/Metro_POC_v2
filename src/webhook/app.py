@@ -232,10 +232,21 @@ async def whatsapp_webhook(request: Request):
         # Verify Twilio signature
         cfg = get_config()
         validator = RequestValidator(cfg.TWILIO_AUTH_TOKEN)
-        url = str(request.url)
+
+        # Reconstruct the public URL Twilio signed against — tunnels (localtunnel/ngrok)
+        # forward the original host via X-Forwarded-Host, so request.url would
+        # otherwise reflect the internal localhost address and fail validation.
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
+        forwarded_host = request.headers.get("X-Forwarded-Host") or request.headers.get("Host", "")
+        if forwarded_host and "localhost" not in forwarded_host:
+            url = f"{forwarded_proto}://{forwarded_host}{request.url.path}"
+        else:
+            url = str(request.url)
+
+        webhook_logger.info(f"Validating Twilio signature against URL: {url}")
 
         if not validator.validate(url, form_dict, signature):
-            webhook_logger.error("Invalid Twilio signature")
+            webhook_logger.error(f"Invalid Twilio signature for URL: {url}")
             raise HTTPException(status_code=401, detail="Invalid Twilio signature")
 
         # Extract phone number (remove "whatsapp:" prefix)
@@ -837,6 +848,44 @@ def finalize_submission(
     except Exception as e:
         webhook_logger.error(f"Error finalizing submission: {e}", exc_info=True)
         db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/submissions/{submission_id}")
+def delete_submission(
+    submission_id: str,
+    api_key: str = Depends(verify_api_key),
+    db: Session = Depends(get_db)
+) -> dict:
+    """Delete a submission and its associated documents and audit logs."""
+    submission = db.query(KYCSubmission).filter(
+        KYCSubmission.id == submission_id
+    ).first()
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    try:
+        db.query(Document).filter(Document.kyc_submission_id == submission_id).delete()
+        db.query(AuditLog).filter(AuditLog.kyc_submission_id == submission_id).delete()
+        employee_id = submission.employee_id
+        db.delete(submission)
+
+        # Delete employee record if no other submissions reference it
+        remaining = db.query(KYCSubmission).filter(
+            KYCSubmission.employee_id == employee_id
+        ).count()
+        if remaining == 0:
+            employee = db.query(Employee).filter(Employee.id == employee_id).first()
+            if employee:
+                db.delete(employee)
+
+        db.commit()
+        webhook_logger.info(f"Submission {submission_id} deleted")
+        return {"id": submission_id, "message": "Submission deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        webhook_logger.error(f"Error deleting submission {submission_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
