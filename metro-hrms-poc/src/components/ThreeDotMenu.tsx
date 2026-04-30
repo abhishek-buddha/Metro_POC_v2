@@ -66,7 +66,7 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({
             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
           >
             <X size={16} />
-            <span>Cancel</span>
+            <span>Delete</span>
           </button>
         </div>
       )}

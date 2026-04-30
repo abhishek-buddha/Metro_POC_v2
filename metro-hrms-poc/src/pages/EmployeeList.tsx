@@ -76,9 +76,15 @@ const EmployeeList: React.FC = () => {
     navigate(`/employee/${id}/form`);
   };
 
-  const handleCancel = (id: string) => {
-    if (confirm('Are you sure you want to cancel this submission?')) {
-      console.log('Canceling submission:', id);
+  const handleCancel = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this submission? This cannot be undone.')) return;
+    try {
+      await submissionApi.delete(id);
+      setSubmissions((prev) => prev.filter((s) => s.id !== id));
+      setFilteredSubmissions((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error('Error deleting submission:', err);
+      alert('Failed to delete submission. Please try again.');
     }
   };
 
