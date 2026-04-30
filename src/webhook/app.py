@@ -555,7 +555,14 @@ def get_submission(
                     "file_path": doc.file_path,
                     "file_size": doc.file_size,
                     "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else None,
-                    "extraction_method": doc.extraction_method
+                    "extraction_method": doc.extraction_method,
+                    "aadhaar_side": (
+                        lambda d: (
+                            "both"  if (d.get("name") or d.get("aadhaar_number")) and d.get("address") else
+                            "front" if (d.get("name") or d.get("aadhaar_number")) else
+                            "back"  if d.get("address") else None
+                        )
+                    )(json.loads(doc.raw_extraction_json) if doc.document_type == "AADHAAR_CARD" and doc.raw_extraction_json else {})
                 }
                 for doc in submission.documents
             ]

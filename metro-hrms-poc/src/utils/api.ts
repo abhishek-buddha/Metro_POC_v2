@@ -92,7 +92,7 @@ const mapSubmission = (backendData: any): Submission => {
       : null,
     aadhaar_pdf_urls: (backendData.documents ?? [])
       .filter((d: any) => d.document_type === 'AADHAAR_CARD' && d.file_path)
-      .map((d: any) => toDocumentUrl(d.file_path)),
+      .map((d: any) => ({ url: toDocumentUrl(d.file_path), side: d.aadhaar_side ?? null })),
     pan_pdf_url: backendData.documents?.find((d: any) => d.document_type === 'PAN_CARD')?.file_path
       ? toDocumentUrl(backendData.documents.find((d: any) => d.document_type === 'PAN_CARD').file_path)
       : null,

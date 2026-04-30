@@ -480,24 +480,31 @@ const EmployeeForm: React.FC = () => {
                   </label>
                   {submission?.aadhaar_pdf_urls && submission.aadhaar_pdf_urls.length > 0 ? (
                     <div className="space-y-2">
-                      {submission.aadhaar_pdf_urls.map((url, idx) => (
-                        <div key={idx} className="border border-gray-300 rounded-lg p-3 flex items-center justify-between">
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <FileText size={16} className="text-indigo-600 flex-shrink-0" />
-                            <span className="text-sm text-gray-700 truncate">
-                              Aadhaar {submission.aadhaar_pdf_urls.length > 1 ? (idx === 0 ? '(Front / Side 1)' : '(Back / Side 2)') : ''}
-                            </span>
+                      {submission.aadhaar_pdf_urls.map((item, idx) => {
+                        const sideLabel =
+                          item.side === 'both'  ? 'Both Sides' :
+                          item.side === 'front' ? 'Front Side' :
+                          item.side === 'back'  ? 'Back Side'  :
+                          submission.aadhaar_pdf_urls.length > 1 ? `Side ${idx + 1}` : '';
+                        return (
+                          <div key={idx} className="border border-gray-300 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              <FileText size={16} className="text-indigo-600 flex-shrink-0" />
+                              <span className="text-sm text-gray-700 truncate">
+                                Aadhaar Card {sideLabel ? `(${sideLabel})` : ''}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleViewDocument(item.url, `Aadhaar Card ${idx + 1}`, true)}
+                              className="p-1 text-indigo-600 hover:bg-indigo-50 rounded ml-2"
+                              title="View document"
+                            >
+                              <Eye size={16} />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleViewDocument(url, `Aadhaar Card ${idx + 1}`, true)}
-                            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded ml-2"
-                            title="View document"
-                          >
-                            <Eye size={16} />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="border border-dashed border-gray-300 rounded-lg p-3 text-sm text-gray-400 text-center">

@@ -27,7 +27,7 @@ export interface Submission {
   branch_name: string;
   bank_branch?: string | null;
   aadhaar_pdf_url: string | null;
-  aadhaar_pdf_urls: string[];
+  aadhaar_pdf_urls: Array<{ url: string; side: 'front' | 'back' | 'both' | null }>;
   pan_pdf_url: string | null;
   cancelled_cheque_url: string | null;
 
@@ -60,6 +60,7 @@ export interface Submission {
     document_type: string;
     file_path: string;
     uploaded_at: string;
+    aadhaar_side?: 'front' | 'back' | 'both' | null;
   }>;
 }
 
