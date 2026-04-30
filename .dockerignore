@@ -44,3 +44,21 @@ docs/
 docker-compose.yml
 Dockerfile
 .dockerignore
+
+# Frontend (not needed in backend Docker image)
+frontend/
+metro-hrms-poc/
+
+# Redis Windows binaries (server runs inside container via apt)
+redis/
+redis.zip
+
+# Logs and test output
+*.log
+tests/
+
+# Misc
+*.bat
+*.sh
+*.txt
+watch_submissions.py
