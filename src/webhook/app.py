@@ -99,6 +99,8 @@ class UpdateSubmissionRequest(BaseModel):
     ifsc_code: Optional[str] = None
     bank_name: Optional[str] = None
     bank_branch: Optional[str] = None
+    previously_worked: Optional[str] = None
+    previous_employee_id: Optional[str] = None
 
 
 def generate_employee_id(session: Session) -> str:
@@ -536,6 +538,10 @@ def get_submission(
             "name_match_score": submission.name_match_score,
             "overall_confidence": submission.overall_confidence,
 
+            # Previous employment
+            "previously_worked": submission.previously_worked,
+            "previous_employee_id": submission.previous_employee_id,
+
             # Metadata
             "submitted_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
             "reviewed_at": submission.reviewed_at.isoformat() if submission.reviewed_at else None,
@@ -734,6 +740,12 @@ def update_submission(
             submission.bank_name = update_data.bank_name
         if update_data.bank_branch is not None:
             submission.bank_branch = update_data.bank_branch
+
+        # Previous employment fields
+        if update_data.previously_worked is not None:
+            submission.previously_worked = update_data.previously_worked
+        if update_data.previous_employee_id is not None:
+            submission.previous_employee_id = update_data.previous_employee_id
 
         db.add(AuditLog(
             event_type="SUBMISSION_UPDATED",

@@ -1,11 +1,11 @@
 // Employee form page with multi-step stepper
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Check, Info, Eye, FileText } from 'lucide-react';
+import { Check, Info, Eye, FileText, Clock, GraduationCap, Briefcase } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import DocumentViewer from '../components/DocumentViewer';
 import type { Submission, EmployeeFormData } from '../utils/types';
-import { submissionApi, calculateAge } from '../utils/api';
+import { submissionApi, uploadApi, calculateAge } from '../utils/api';
 
 const EmployeeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +47,14 @@ const EmployeeForm: React.FC = () => {
     grade: '',
     division: '',
     category: '',
+    // Previous Employment
+    previouslyWorked: '',
+    previousEmployeeId: '',
+    // Educational Documents
+    edu10th: null,
+    edu12th: null,
+    eduGraduation: null,
+    eduPostGraduation: null,
   });
   const [documentViewer, setDocumentViewer] = useState({
     isOpen: false,
@@ -128,6 +136,14 @@ const EmployeeForm: React.FC = () => {
         grade: '',
         division: '',
         category: '',
+        // Previous Employment (HR-entered, not from documents):
+        previouslyWorked: data.previously_worked || '',
+        previousEmployeeId: data.previous_employee_id || '',
+        // Educational Documents (uploaded by HR):
+        edu10th: null,
+        edu12th: null,
+        eduGraduation: null,
+        eduPostGraduation: null,
       });
     } catch (err) {
       console.error('Error fetching submission:', err);
@@ -145,6 +161,26 @@ const EmployeeForm: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleEduDocUpload = async (
+    docType: string,
+    field: keyof EmployeeFormData,
+    file: File | null
+  ) => {
+    if (!file || !id) {
+      handleInputChange(field, null);
+      return;
+    }
+    try {
+      const result = await uploadApi.uploadEducationalDoc(id, file, docType);
+      // Store the server file path; toDocumentUrl in api.ts will convert it to a viewable URL
+      handleInputChange(field, result.file_path);
+    } catch (err) {
+      console.error('Educational doc upload failed:', err);
+      // Fall back to local File object so the user doesn't lose their selection
+      handleInputChange(field, file as unknown as string);
+    }
   };
 
   const handleViewDocument = (url: string, name: string, requiresPassword = false) => {
@@ -191,16 +227,37 @@ const EmployeeForm: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Employee Form</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {submission?.temp_id} | {submission?.aadhaar_name || submission?.pan_name}
+          {submission?.aadhaar_name || submission?.pan_name}
         </p>
       </div>
 
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start space-x-3">
-        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-900">
-          Employee's information will become active next the date of onboarding
-        </p>
+      {/* Info Banner + ID Badge */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-start space-x-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-900">
+            Employee's information will become active next the date of onboarding
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          {submission?.hrms_employee_id ? (
+            <>
+              <p className="text-xs text-gray-500 mb-1 font-medium">Employee ID</p>
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white text-sm font-bold rounded-lg shadow-sm">
+                <Check size={13} />
+                {submission.hrms_employee_id}
+              </span>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-amber-700 mb-1 font-medium">Temporary ID</p>
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 text-white text-sm font-bold rounded-lg shadow-sm">
+                <Clock size={13} />
+                {submission?.temp_id || '—'}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stepper */}
@@ -468,6 +525,66 @@ const EmployeeForm: React.FC = () => {
               </div>
             </div>
 
+            {/* Previous Employment Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-indigo-600" />
+                Previous Employment
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Has this employee previously worked at Metro Brands?
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('previouslyWorked', 'yes')}
+                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        formData.previouslyWorked === 'yes'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('previouslyWorked', 'no');
+                        handleInputChange('previousEmployeeId', '');
+                      }}
+                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        formData.previouslyWorked === 'no'
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+                {formData.previouslyWorked === 'yes' && (
+                  <div className="max-w-sm p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Previous Employee ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.previousEmployeeId}
+                      onChange={(e) => handleInputChange('previousEmployeeId', e.target.value)}
+                      placeholder="e.g. EMP2024001"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white"
+                    />
+                    <p className="text-xs text-indigo-600 mt-1.5">
+                      Enter the employee's previous Metro Brands employee ID
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Financial Details Section */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
@@ -629,6 +746,42 @@ const EmployeeForm: React.FC = () => {
               </div>
             </div>
 
+            {/* Educational Documents Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-indigo-600" />
+                Educational Documents
+              </h3>
+              <div className="grid grid-cols-2 gap-6">
+                <FileUpload
+                  label="10th Certificate / Marksheet"
+                  value={formData.edu10th}
+                  onChange={(file) => handleEduDocUpload('10th', 'edu10th', file)}
+                  allowedFormats="PDF, JPG, PNG"
+                  required
+                />
+                <FileUpload
+                  label="12th Certificate / Marksheet"
+                  value={formData.edu12th}
+                  onChange={(file) => handleEduDocUpload('12th', 'edu12th', file)}
+                  allowedFormats="PDF, JPG, PNG"
+                  required
+                />
+                <FileUpload
+                  label="Graduation Certificate / Degree"
+                  value={formData.eduGraduation}
+                  onChange={(file) => handleEduDocUpload('graduation', 'eduGraduation', file)}
+                  allowedFormats="PDF, JPG, PNG"
+                />
+                <FileUpload
+                  label="Post-Graduation Certificate"
+                  value={formData.eduPostGraduation}
+                  onChange={(file) => handleEduDocUpload('pg', 'eduPostGraduation', file)}
+                  allowedFormats="PDF, JPG, PNG"
+                />
+              </div>
+            </div>
+
             {/* Other Details Section */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
@@ -640,13 +793,6 @@ const EmployeeForm: React.FC = () => {
                   value={formData.resume}
                   onChange={(file) => handleInputChange('resume', file)}
                   allowedFormats="PDF"
-                />
-
-                <FileUpload
-                  label="Educational Documents Upload"
-                  value={formData.educationalDocs}
-                  onChange={(file) => handleInputChange('educationalDocs', file)}
-                  required
                 />
 
                 <FileUpload

@@ -101,6 +101,9 @@ const mapSubmission = (backendData: any): Submission => {
       : null,
     aadhaar_password: 'DOB123',
 
+    previously_worked: backendData.previously_worked || '',
+    previous_employee_id: backendData.previous_employee_id || '',
+
     status: backendData.status,
     submission_level: backendData.status === 'FINALIZED' ? 'Completed' : backendData.status === 'APPROVED' ? 'Basic Info' : 'Payroll',
     entity_name: 'Metro Brands Limited',
@@ -149,6 +152,8 @@ export const submissionApi = {
       ifsc_code: data.ifscCode,
       bank_name: data.bankName,
       bank_branch: data.branchAddress,
+      previously_worked: data.previouslyWorked,
+      previous_employee_id: data.previousEmployeeId,
     });
     return response.data;
   },
@@ -230,6 +235,27 @@ export const uploadApi = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.detail || 'Upload failed (' + response.status + ')');
+    }
+    return response.json();
+  },
+
+  uploadEducationalDoc: async (
+    submissionId: string,
+    file: File,
+    docType: string
+  ): Promise<{ doc_id: string; file_path: string }> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('submission_id', submissionId);
+    form.append('doc_type', docType);
+    const response = await fetch(`${API_BASE_URL}/api/upload/educational`, {
+      method: 'POST',
+      headers: { 'X-API-Key': API_KEY },
+      body: form,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Educational doc upload failed (' + response.status + ')');
     }
     return response.json();
   },

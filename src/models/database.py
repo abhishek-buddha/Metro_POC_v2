@@ -93,6 +93,10 @@ class KYCSubmission(Base):
     blood_group = Column(String(10), nullable=True)
     marital_status = Column(String(50), nullable=True)
 
+    # Previous employment (HR-entered during onboarding)
+    previously_worked = Column(String(10), nullable=True)   # 'yes' or 'no'
+    previous_employee_id = Column(String(100), nullable=True)
+
     # Cross-validation fields
     name_match_score = Column(Float, nullable=True)
     overall_confidence = Column(Float, nullable=True)

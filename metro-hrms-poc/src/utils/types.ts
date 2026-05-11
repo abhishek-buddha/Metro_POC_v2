@@ -44,6 +44,9 @@ export interface Submission {
   address_line4?: string;
   aadhaar_password?: string;
 
+  previously_worked?: string;
+  previous_employee_id?: string;
+
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FINALIZED';
   submission_level: string;
   entity_name: string;
@@ -105,6 +108,16 @@ export interface EmployeeFormData {
   grade: string;
   division: string;
   category: string;
+
+  // Previous Employment
+  previouslyWorked: string;
+  previousEmployeeId: string;
+
+  // Educational Documents
+  edu10th: string | null;
+  edu12th: string | null;
+  eduGraduation: string | null;
+  eduPostGraduation: string | null;
 }
 
 export interface FilterState {

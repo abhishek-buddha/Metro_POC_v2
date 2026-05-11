@@ -182,6 +182,83 @@ async def upload_document(
             "status": "queued", "message": "Document queued for processing."}
 
 
+@router.post("/educational", status_code=202, summary="Upload an educational document")
+async def upload_educational_doc(
+    file: UploadFile = File(..., description="Educational certificate or marksheet (≤ 10 MB)"),
+    submission_id: str = Form(..., description="KYC submission UUID"),
+    doc_type: str = Form(..., description="10th | 12th | graduation | pg"),
+    x_api_key: Optional[str] = Header(None),
+):
+    """
+    Store an educational document (10th/12th/Graduation/PG) against an existing
+    KYC submission.  No AI extraction — the file is stored as-is and linked to
+    the submission as a EDUCATIONAL_DOCUMENT record.
+    """
+    _auth(x_api_key)
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file.")
+    if len(content) > MAX_BYTES:
+        raise HTTPException(status_code=413, detail=f"File exceeds {MAX_BYTES // (1024 * 1024)} MB limit.")
+
+    mt = _mime(file)
+    ext = MIME_TO_EXT[mt]
+
+    # Resolve submission and employee phone for directory namespacing
+    try:
+        with get_session() as db:
+            sub = db.query(KYCSubmission).filter(KYCSubmission.id == submission_id).first()
+            if not sub:
+                raise HTTPException(status_code=404, detail="Submission not found.")
+            phone = sub.employee.phone_number
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("edu_db_lookup_failed", extra={"submission_id": submission_id, "err": str(exc)})
+        raise HTTPException(status_code=500, detail="Database error.")
+
+    doc_id = str(uuid.uuid4())
+    dest_dir = os.path.join(config.UPLOADS_PATH, phone, "educational")
+    os.makedirs(dest_dir, exist_ok=True)
+    fpath = os.path.join(dest_dir, f"{doc_id}{ext}")
+
+    try:
+        with open(fpath, "wb") as fh:
+            fh.write(content)
+    except OSError as exc:
+        logger.error("edu_file_write_failed", extra={"doc_id": doc_id, "err": str(exc)})
+        raise HTTPException(status_code=500, detail="Could not save file.")
+
+    try:
+        with get_session() as db:
+            doc = Document(
+                id=doc_id,
+                kyc_submission_id=submission_id,
+                document_type="EDUCATIONAL_DOCUMENT",
+                file_path=fpath,
+                file_size=len(content),
+                raw_extraction_json=json.dumps({"edu_doc_type": doc_type}),
+            )
+            db.add(doc)
+            db.commit()
+    except Exception as exc:
+        logger.error("edu_db_save_failed", extra={"doc_id": doc_id, "err": str(exc)})
+        _rm(fpath)
+        raise HTTPException(status_code=500, detail="Database error.")
+
+    logger.info("edu_upload_done", extra={
+        "doc_id": doc_id, "submission_id": submission_id, "doc_type": doc_type,
+    })
+    return {
+        "doc_id": doc_id,
+        "submission_id": submission_id,
+        "doc_type": doc_type,
+        "file_path": fpath,
+        "status": "uploaded",
+    }
+
+
 @router.get("/status/{job_id}", summary="Poll extraction status")
 async def get_upload_status(job_id: str, x_api_key: Optional[str] = Header(None)):
     """
