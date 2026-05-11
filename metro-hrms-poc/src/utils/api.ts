@@ -27,7 +27,7 @@ const convertDateFormat = (dateStr: string): string => {
 };
 
 // Convert an absolute server file path to a viewable URL
-const toDocumentUrl = (filePath: string): string => {
+export const toDocumentUrl = (filePath: string): string => {
   const normalized = filePath.replace(/\\/g, '/');
   const match = normalized.match(/uploads\/(.+)$/);
   return match ? `${API_BASE_URL}/uploads/${match[1]}` : '';

@@ -4,7 +4,7 @@ import { Upload, Eye, Trash2 } from 'lucide-react';
 
 interface FileUploadProps {
   label: string;
-  value: string | null;
+  value: string | File | null;
   onChange: (file: File | null) => void;
   onView?: () => void;
   accept?: string;
@@ -41,8 +41,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
   };
 
-  const hasFile = value || existingFileUrl;
-  const displayName = value || existingFileUrl?.split('/').pop() || '';
+  const hasFile = !!(value || existingFileUrl);
+  const displayName = value instanceof File
+    ? value.name
+    : typeof value === 'string'
+      ? value.split('/').pop() || value
+      : existingFileUrl?.split('/').pop() || '';
 
   return (
     <div>

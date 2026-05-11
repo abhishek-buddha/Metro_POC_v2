@@ -5,7 +5,7 @@ import { Check, Info, Eye, FileText, Clock, GraduationCap, Briefcase } from 'luc
 import FileUpload from '../components/FileUpload';
 import DocumentViewer from '../components/DocumentViewer';
 import type { Submission, EmployeeFormData } from '../utils/types';
-import { submissionApi, uploadApi, calculateAge } from '../utils/api';
+import { submissionApi, uploadApi, calculateAge, toDocumentUrl } from '../utils/api';
 
 const EmployeeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -174,12 +174,28 @@ const EmployeeForm: React.FC = () => {
     }
     try {
       const result = await uploadApi.uploadEducationalDoc(id, file, docType);
-      // Store the server file path; toDocumentUrl in api.ts will convert it to a viewable URL
-      handleInputChange(field, result.file_path);
+      handleInputChange(field, toDocumentUrl(result.file_path) || result.file_path);
     } catch (err) {
       console.error('Educational doc upload failed:', err);
-      // Fall back to local File object so the user doesn't lose their selection
-      handleInputChange(field, file as unknown as string);
+      alert('Failed to upload document. Please try again.');
+    }
+  };
+
+  const handlePhotoUpload = async (
+    docType: 'profile_photo' | 'signature',
+    field: keyof EmployeeFormData,
+    file: File | null
+  ) => {
+    if (!file || !id) {
+      handleInputChange(field, null);
+      return;
+    }
+    try {
+      const result = await uploadApi.uploadEducationalDoc(id, file, docType);
+      handleInputChange(field, toDocumentUrl(result.file_path) || result.file_path);
+    } catch (err) {
+      console.error('Photo/signature upload failed:', err);
+      alert('Failed to upload file. Please try again.');
     }
   };
 
@@ -533,37 +549,22 @@ const EmployeeForm: React.FC = () => {
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Has this employee previously worked at Metro Brands?
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('previouslyWorked', 'yes')}
-                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                        formData.previouslyWorked === 'yes'
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleInputChange('previouslyWorked', 'no');
-                        handleInputChange('previousEmployeeId', '');
-                      }}
-                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                        formData.previouslyWorked === 'no'
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      No
-                    </button>
-                  </div>
+                  <select
+                    value={formData.previouslyWorked}
+                    onChange={(e) => {
+                      handleInputChange('previouslyWorked', e.target.value);
+                      if (e.target.value === 'no') handleInputChange('previousEmployeeId', '');
+                    }}
+                    className="w-full max-w-xs px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  >
+                    <option value="">Select</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
                 </div>
                 {formData.previouslyWorked === 'yes' && (
                   <div className="max-w-sm p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
@@ -798,7 +799,8 @@ const EmployeeForm: React.FC = () => {
                 <FileUpload
                   label="Profile Photo"
                   value={formData.profilePhoto}
-                  onChange={(file) => handleInputChange('profilePhoto', file)}
+                  onChange={(file) => handlePhotoUpload('profile_photo', 'profilePhoto', file)}
+                  onView={formData.profilePhoto ? () => handleViewDocument(formData.profilePhoto!, 'Profile Photo') : undefined}
                   accept=".jpg,.jpeg,.png"
                   allowedFormats="JPG, JPEG"
                   required
@@ -814,7 +816,8 @@ const EmployeeForm: React.FC = () => {
                 <FileUpload
                   label="Signature Attachment"
                   value={formData.signatureAttachment}
-                  onChange={(file) => handleInputChange('signatureAttachment', file)}
+                  onChange={(file) => handlePhotoUpload('signature', 'signatureAttachment', file)}
+                  onView={formData.signatureAttachment ? () => handleViewDocument(formData.signatureAttachment!, 'Signature') : undefined}
                   accept=".jpg,.jpeg,.png"
                   allowedFormats="JPG, JPEG"
                   required
